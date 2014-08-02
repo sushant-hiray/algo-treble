@@ -1,4 +1,4 @@
 algo-treble
 ===========
 
-Solutions to problems solved on codechef, spoj and hackerrank.
+My solutions to problems solved on Codechef, SPOJ and Hackerrank
