@@ -56,14 +56,14 @@ inline void scan(string &ret){
 
 int main()
 {
-    int t, n;
-    lld temp, ans;
+    int t;
+    lld temp, ans, n;
     t = scan_d();
     while(t!=0) 
     {
-        n = scan_d();
+        n = scan_lld();
         ans = 0;
-        for(int i=1; i <= n; i++)
+        for(lld i=1; i <= n; i++)
         {
             temp = scan_lld();
             if (((i*(n+1-i))%2) == 1) {
