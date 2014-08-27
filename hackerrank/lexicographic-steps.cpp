@@ -53,123 +53,56 @@ inline void scan(string &ret){
     }
 }
 
-struct node{
-  int value; // index
-  char id;   // 'H' or 'V'
-  node* left = NULL;
-  node* right = NULL;
-};
-
-struct tree{
-    node* head = NULL;
-};
-
-int cur = 0;
-
-void build(node* head, int h, int v)
+lld factorial(int n)
 {
-    if (h > 0) {
-        node* left = new node;
-        left->id = 'H';
-        head->left = left;
-        build(head->left, h - 1, v);
+    lld ans = 1;
+    for(int i = 2; i <= n; i++)
+    {
+        ans*=i;
     }
-    if (v > 0) {
-        node* right = new node;
-        right->id = 'R';
-        head->right = right;
-        build(head->right, h, v - 1);
-        head->right->id = 'V';
-    }
-    return;
+    return ans;
 }
 
-void init(node* head)
+inline lld arrange(int h, int v)
 {
-    if ((head->left == NULL) && (head->right == NULL)) {
-        head->value = cur;
-        cur++;
-    }
-    else if (head->left == NULL) {
-        init(head->right);
-        head->value = head->right->value;
-    } else if (head->right == NULL) {
-        init(head->left);
-        head->value = head->left->value;
-    } else {
-        init(head->left);
-        init(head->right);
-        head->value = head->right->value;
-    }
-    return;
+    return factorial(h + v)/(factorial(h)*factorial(v));
 }
 
-void find(node* head, int count)
+void solve(lld k, int n, int m, lld add)
 {
-    if (head == NULL)
+    if ((n <= 0) && (m <= 0))
         return;
-    else if ((head->left!= NULL) && (count <= head->left->value)) {
-        if (head->id!= 'P')
-            cout << head->id;
-        find(head->left, count);
-        return;
-    } else if ((head->right!= NULL) && (count <= head->right->value)) {
-        if (head->id!= 'P')
-            cout << head->id;
-        find(head->right, count);
-        return;
-    } else {
-        if (head->id!= 'P')
-            cout << head->id;
-        return;
-    }
-}
-
-void print(node* head, int count)
-{
-    if (head == NULL)
-        return;
-    else {
-        for(int i=0; i < count; i++) {
-            cout << "-";
+    else if (n > 0)
+    {
+        lld temp = arrange(n-1, m);
+        if (k<=(add + temp))
+        {   
+            cout << 'H';
+            solve(k, n-1, m, add);
+            return;
+        } else {
+            cout << 'V';
+            solve(k, n, m - 1, add + temp);
+            return;
         }
-        cout<< " "<<head->value << head->id << endl;
-        print(head->left, count+1);
-        print(head->right, count+1);
-        return;
-    }
-}
-
-void my_delete(node* head)
-{
-    if (head == NULL)
-        return;
-    else {
-        my_delete(head->left);
-        my_delete(head->right);
-        delete head;
+    } else if (m > 0) {
+        cout << 'V';
+        solve(k, n, m - 1, add);
         return;
     }
 }
 
 int main()
 {
-    int t, n, m, k;
+    int t, n, m;
+    lld k;
     t = scan_d();
     while(t!=0) {
         n = scan_d();
         m = scan_d();
-        k = scan_d();
-        node* head = new node;
-        head->left = NULL;
-        head->right = NULL;
-        head->id = 'P';
-        cur = 0;
-        build(head, n, m);
-        init(head);
-        find(head, k);
+        k = scan_lld();
+        solve(k+1, n, m, 0);
         cout << endl;
-        my_delete(head);
         t--;
     }
     return 0;
