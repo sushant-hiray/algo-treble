@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <bits/stdc++.h>
 
-#define gc getchar_unlocked
+#define gc gc_unlocked
 #define MOD 1000000007
 #define ll long long
 #define MAXN 100001

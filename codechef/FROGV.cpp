@@ -11,12 +11,12 @@ using namespace std;
 
 inline int fastread(){
     int a=0;
-    char c=getchar_unlocked();
-    while(c<48 || c>57) c=getchar_unlocked();
+    char c=gc_unlocked();
+    while(c<48 || c>57) c=gc_unlocked();
     while(c>=48 && c<=57)
     {
         a=(a<<3)+(a<<1)+c-'0';
-        c=getchar_unlocked();
+        c=gc_unlocked();
     }
     return a;
 }
