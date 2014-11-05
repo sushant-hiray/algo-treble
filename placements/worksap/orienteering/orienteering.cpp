@@ -142,17 +142,21 @@ private:
     vector<vector<checkpoint_node*> > cp_nodes;
     vector<location> checkpoint;
     vector<vector<int> > weights;
+    vector<vector<int> > hamiltonian_length;
     int width;
     int height;
     int cp_s;
+    location start;
+    location end;
     void parse_input();
     void print_index(int);
     void print_maze();
     void print_cp();
+    void print_cp_weights();
     void init_graph();
     void calc_weights();
     void generate_cp_graph();
-
+    int find_min();
     template<typename T>
     int shortest_path(T*, T* );
     
@@ -174,10 +178,12 @@ void Orienteering::main()
 {
     parse_input();
     init_graph();
-    print_maze();
+    // print_maze();
     calc_weights();
     generate_cp_graph();
-    print_cp();
+    // print_cp();
+    cout << "ANS is " << find_min() << endl;
+    // print_cp_weights();
     
 }
 
@@ -205,10 +211,12 @@ void Orienteering::parse_input()
                     break;
                 } case 'S' : {
                     node* n = new node(3,i,j);
+                    start = n->l;
                     t.push_back(n);
                     break;
                 } case 'G' : {
                     node* n = new node(4,i,j);
+                    end = n->l;
                     t.push_back(n);
                     break;
                 }
@@ -225,6 +233,7 @@ void Orienteering::parse_input()
     cp_s = checkpoint.size();
     for(int i=0;i<cp_s;i++) {
         weights.push_back(vector<int>(cp_s, INT_MAX));
+        hamiltonian_length.push_back(vector<int>(cp_s, INT_MAX));
         vector<checkpoint_node*> temp;
         for(int j=0;j<pow(2, cp_s);j++) {
             checkpoint_node* cp_n = new checkpoint_node(i,j, cp_s);
@@ -281,13 +290,6 @@ void Orienteering::print_cp()
         cout << " ";
     }
     cout << endl;
-    for(int i=0;i<checkpoint.size();i++) {
-        for(int j=0;j<checkpoint.size();j++) {
-            cout << weights[i][j] << " ";
-        }
-    cout << endl;
-    }
-
 
     for(int i=0;i<cp_nodes.size();i++) {
         for(int j=0;j<cp_nodes[i].size();j++) {
@@ -295,6 +297,7 @@ void Orienteering::print_cp()
             cp_nodes[i][j]->print();
             cout << "--->";
             for(auto it = cp_nodes[i][j]->neighbors.begin(); it!= cp_nodes[i][j]->neighbors.end(); it++) {
+                cout << "<" << (*it)->weight << "> ";
                 ((*it)->a)->print();
                 cout << ", ";
             }
@@ -303,7 +306,22 @@ void Orienteering::print_cp()
     }
 }
 
-
+void Orienteering::print_cp_weights()
+{
+    for(int i=0;i<cp_s;i++) {
+        for(int j=0;j<cp_s;j++) {
+            cout << weights[i][j] << " ";
+        }
+        cout << endl;
+    }
+    cout << "hamiltonian_length are :"<<endl;
+    for(int i=0;i<cp_s;i++) {
+        for(int j=0;j<cp_s;j++) {
+            cout << hamiltonian_length[i][j] << " ";
+        }
+        cout << endl;
+    }
+}
 
 void Orienteering::init_graph()
 {
@@ -359,7 +377,6 @@ void Orienteering::reset_graph(vector<vector<T*>>& graph)
 
 template<typename T>
 int Orienteering::shortest_path(T* cur, T* end) {
-    cur->wt=0;
     priority_queue<T*, std::vector<T*>, node_comparison> pq;
     pq.push(cur);
     while(!pq.empty()) {
@@ -390,11 +407,79 @@ void Orienteering::calc_weights()
                 weights[i][j] = weights[j][i];
             else {
                 reset_graph<node>(maze);
+                maze[checkpoint[i].x][checkpoint[i].y]->wt=0;
                 weights[i][j] = shortest_path<node>(maze[checkpoint[i].x][checkpoint[i].y], 
                                 maze[checkpoint[j].x][checkpoint[j].y]);
             }
         }
     }
+}
+
+int Orienteering::find_min()
+{
+    for(int i=0;i<cp_s;i++) {
+        for(int j=0;j<cp_s;j++) {
+            if (i==j)
+                hamiltonian_length[i][j] = 0;
+            else if (j < i)
+                hamiltonian_length[i][j] = hamiltonian_length[j][i];
+            else {
+                reset_graph<checkpoint_node>(cp_nodes);
+                cp_nodes[i][pow(2,cp_s-1-i)]->wt = 0;
+                shortest_path<node>(maze[start.x][start.y], maze[checkpoint[i].x][checkpoint[i].y]);
+                hamiltonian_length[i][j] = shortest_path<checkpoint_node>(cp_nodes[i][pow(2,cp_s-1-i)],
+                                            cp_nodes[j][pow(2,cp_s)-1]);
+
+            }
+        }
+    }
+
+    int min_length = INT_MAX;
+    if (cp_s == 0) {
+        reset_graph<node>(maze);
+        maze[start.x][start.y]->wt=0;
+        min_length = shortest_path<node>(maze[start.x][start.y], maze[end.x][end.y]);
+        return min_length;
+    } else if (cp_s == 1) {
+        reset_graph<node>(maze);
+        maze[start.x][start.y]->wt=0;
+        min_length = shortest_path<node>(maze[start.x][start.y], maze[checkpoint[0].x][checkpoint[0].y]);
+
+        reset_graph<node>(maze);
+        maze[checkpoint[0].x][checkpoint[0].y]->wt=0;
+        min_length += shortest_path<node>(maze[checkpoint[0].x][checkpoint[0].y],  maze[end.x][end.y]);
+        return min_length;
+    }
+
+    for(int i=0;i<cp_s;i++) {
+        for(int j=0;j<cp_s;j++) {
+            if (i==j)
+                continue;
+            else {
+                int cur_length = 0;
+                reset_graph<node>(maze);
+                // path length from start node to checkpoint[i]
+                maze[start.x][start.y]->wt=0;
+                cur_length+=shortest_path<node>(maze[start.x][start.y], maze[checkpoint[i].x][checkpoint[i].y]);
+
+                // hamiltonian path length from checkpoint[i] to checkpoint[j]
+                cur_length+=hamiltonian_length[i][j];
+
+                //path length from checkpoint[j] to end
+                reset_graph<node>(maze);
+                maze[checkpoint[j].x][checkpoint[j].y]->wt=0;
+                cur_length+=shortest_path<node>(maze[checkpoint[j].x][checkpoint[j].y], maze[end.x][end.y]);
+
+                // cout << "cost for ";
+                // checkpoint[i].print();
+                // checkpoint[j].print();
+                // cout << " is " << cur_length << endl;
+                if (cur_length < min_length)
+                    min_length = cur_length;
+            }
+        }
+    }
+    return min_length;
 }
 
 int main(int argc, char const *argv[])
