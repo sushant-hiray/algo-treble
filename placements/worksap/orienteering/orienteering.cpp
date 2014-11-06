@@ -38,12 +38,13 @@ struct node {
     int cp_id;
     location l;
     list<edge*> neighbors;
-    node(int v, int i, int j, int cp=-1) {
+    node(int v, int i, int j, int cp, int d) {
         l.x = i;
         l.y = j;
         val = v;
         wt = INT_MAX;
         cp_id = cp;
+        id = d;
     }
     void print() {
         cout << wt << " | ";
@@ -149,6 +150,7 @@ private:
     vector<location> checkpoint;
     vector<vector<int> > weights;
     vector<vector<int> > hamiltonian_length;
+    vector<vector<int> > dfs_wt;
     int width;
     int height;
     int cp_s;
@@ -168,7 +170,7 @@ private:
     void calc_weights();
     void generate_cp_graph();
     int find_min();
-    void dfs(node*);
+    void dfs(node*,int);
 
 
     template<typename T>
@@ -216,33 +218,32 @@ void Orienteering::parse_input()
             char ch = str[j];
             switch(ch) {
                 case '#' : {
-                    node* n = new node(-1,i,j);
+                    node* n = new node(-1,i,j,-1,i*width+j);
                     t.push_back(n);
                     break;
                 } case '@' : {
-                    node* n = new node(2,i,j,count);
-                    cout << "[" << i << "," << j <<"]" <<endl;
+                    node* n = new node(2,i,j,count,i*width+j);
                     checkpoint.push_back(location(i,j));
                     t.push_back(n);
                     count++;
                     break;
                 } case '.' : {
-                    node* n = new node(1,i,j);
+                    node* n = new node(1,i,j,-1,i*width+j);
                     t.push_back(n);
                     break;
                 } case 'S' : {
-                    node* n = new node(3,i,j);
+                    node* n = new node(3,i,j,-1,i*width+j);
                     start = n->l;
                     t.push_back(n);
                     break;
                 } case 'G' : {
-                    node* n = new node(4,i,j);
+                    node* n = new node(4,i,j,-1,i*width+j);
                     end = n->l;
                     t.push_back(n);
                     break;
                 }
                 default : {
-                    node* n = new node(6,i,j);
+                    node* n = new node(6,i,j,-1,i*width+j);
                     t.push_back(n);
                     break;
                 }
@@ -257,9 +258,11 @@ void Orienteering::parse_input()
     
     maze[start.x][start.y]->cp_id = cp_s-2;
     maze[end.x][end.y]->cp_id = cp_s-1;
-    
+    // weights.resize(cp_s , vector<int>( cp_s , INT_MAX ));
     for(int i=0;i<cp_s;i++) {
         weights.push_back(vector<int>(cp_s, INT_MAX));
+        dfs_wt.push_back(vector<int>(height*width, INT_MAX));
+
         hamiltonian_length.push_back(vector<int>(cp_s-2,INT_MAX));
         vector<checkpoint_node*> temp;
         for(int j=0;j<pow(2, cp_s-2);j++) {
@@ -346,6 +349,13 @@ void Orienteering::print_cp_weights()
     for(int i=0;i<cp_s;i++) {
         for(int j=0;j<cp_s;j++) {
             cout << weights[i][j] << " ";
+        }
+        cout << endl;
+    }
+
+    for(int i=0;i<cp_s;i++) {
+        for(int j=0;j<height*width;j++) {
+            cout << dfs_wt[i][j] << " ";
         }
         cout << endl;
     }
@@ -440,10 +450,10 @@ int Orienteering::shortest_path(T* cur, T* end) {
     return INT_MAX;
 }
 
-void Orienteering::dfs(node* cur)
+void Orienteering::dfs(node* cur, int i)
 {
-    reset_graph<node>(maze);
     cur->wt=0;
+    dfs_wt[i][cur->id] = 0;
     int count = 0;
     priority_queue<node*, std::vector<node*>, node_comparison> pq;
     pq.push(cur);
@@ -451,15 +461,16 @@ void Orienteering::dfs(node* cur)
     while(!pq.empty()) {
         cur = pq.top();
         if (cur->val==2 || cur->val==3 || cur->val==4) {
-            weights[cp_index][cur->cp_id] = cur->wt;
+            weights[cp_index][cur->cp_id] = dfs_wt[i][cur->id];
             count++;
         } 
         if (count == cp_s)
             break;
         pq.pop();
         for(auto it = cur->neighbors.begin(); it!=cur->neighbors.end();it++) {
-            if ((*it)->a->wt >  cur->wt + (*it)->weight) {
-                (*it)->a->wt = cur->wt+(*it)->weight;
+            if (dfs_wt[i][(*it)->a->id] > dfs_wt[i][cur->id] + (*it)->weight) {
+                dfs_wt[i][(*it)->a->id] = dfs_wt[i][cur->id] + (*it)->weight;
+                (*it)->a->wt = dfs_wt[i][(*it)->a->id];
                 pq.push((*it)->a);
             }
         }
@@ -469,7 +480,7 @@ void Orienteering::dfs(node* cur)
 void Orienteering::calc_weights()
 {
     for(int i=0; i<checkpoint.size();i++) {
-        dfs(maze[checkpoint[i].x][checkpoint[i].y]);
+        dfs(maze[checkpoint[i].x][checkpoint[i].y], i);
     }
 }
 
