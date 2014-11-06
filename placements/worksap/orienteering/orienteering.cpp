@@ -76,7 +76,8 @@ struct checkpoint_node
     int node_id;
     int wt;
     string nid_str;
-
+    list<checkpoint_edge*> neighbors;
+    
     checkpoint_node(int c,int n, int m, int w=INT_MAX) {
         cp_id = c;
         node_id = n;
@@ -172,7 +173,7 @@ private:
 
     template<typename T>
     int shortest_path(T*, T* );
-    
+    int shortest_cp_path(checkpoint_node*, checkpoint_node* );
     template<typename T>  
     void reset_graph(vector<vector<T*>> &);
     
@@ -195,11 +196,11 @@ void Orienteering::main()
     init_graph();
     // print_maze();
     calc_weights();
-    // // print_cp_weights();
+    // print_cp_weights();
     
     // generate_cp_graph();
     // print_cp();
-    cout << "ANS is " << find_min() << " " <<sizeof(list<int>)<<endl;
+    cout << "ANS is " << find_min() <<endl;
     
 }
 
@@ -416,6 +417,47 @@ void Orienteering::generate_cp_graph()
     }
 }
 
+int Orienteering::shortest_cp_path(checkpoint_node* cur, checkpoint_node* end) {
+    priority_queue<checkpoint_node*, std::vector<checkpoint_node*>, node_comparison> pq;
+    int cp_s_left = cp_s - 2;
+    for(int i=0; i<cp_s_left;i++) {
+        int new_id = pow(2, cp_s_left-i-1);
+        cp_nodes[i][new_id]->wt = weights[i][cp_s_left];
+        pq.push(cp_nodes[i][new_id]);
+    }
+    
+    while(!pq.empty()) {
+        cur = pq.top();
+        if (cur->eq(*end)) {
+            return cur->wt;
+        } else {
+            pq.pop();
+            int i = cur->cp_id;
+            int j = cur->node_id;
+            if (cp_nodes[i][j]->is_valid()) {
+                string str = cp_nodes[i][j]->nid_str;
+                for(int k=0;k <cp_s_left;k++) {
+                    if (str[k]=='0' && i!=k) {
+                        int new_id = j + pow(2, cp_s_left - 1 - k);
+                        if (cp_nodes[k][new_id]->wt > cur->wt + weights[i][k]) {
+                            cp_nodes[k][new_id]->wt = cur->wt + weights[i][k];
+                            pq.push(cp_nodes[k][new_id]);
+                        }
+                    } 
+                }
+                if (j==pow(2,cp_s_left)-1) {
+                    if (end_node->wt > cur->wt + weights[i][cp_s_left+1]) {
+                        end_node->wt = cur->wt + weights[i][cp_s_left+1];
+                        pq.push(end_node);
+                    }
+                }
+            }
+        }
+    }
+    return INT_MAX;
+}
+
+
 template<typename T>
 void Orienteering::reset_graph(vector<vector<T*>>& graph)
 {
@@ -446,6 +488,7 @@ int Orienteering::shortest_path(T* cur, T* end) {
     }
     return INT_MAX;
 }
+
 
 void Orienteering::dfs(node* cur, int i)
 {
@@ -500,7 +543,7 @@ int Orienteering::find_min()
         return min_length;
     } else {
         st_node->wt = 0;
-        min_length = shortest_path<checkpoint_node>(st_node, end_node);
+        min_length = shortest_cp_path(st_node, end_node);
         return min_length;
     }
 }
