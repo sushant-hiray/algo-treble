@@ -76,9 +76,6 @@ struct checkpoint_node
     int node_id;
     int wt;
     string nid_str;
-    list<checkpoint_edge*> neighbors;
-
-
 
     checkpoint_node(int c,int n, int m, int w=INT_MAX) {
         cp_id = c;
@@ -198,17 +195,18 @@ void Orienteering::main()
     init_graph();
     // print_maze();
     calc_weights();
-    // print_cp_weights();
+    // // print_cp_weights();
     
-    generate_cp_graph();
+    // generate_cp_graph();
     // print_cp();
-    cout << "ANS is " << find_min() << endl;
+    cout << "ANS is " << find_min() << " " <<sizeof(list<int>)<<endl;
     
 }
 
 void Orienteering::parse_input()
 {
     cin >>width>>height;
+
     int count = 0;
     for(int i=0;i<height;i++) {
         std::vector<node*> t;
@@ -258,12 +256,11 @@ void Orienteering::parse_input()
     
     maze[start.x][start.y]->cp_id = cp_s-2;
     maze[end.x][end.y]->cp_id = cp_s-1;
-    // weights.resize(cp_s , vector<int>( cp_s , INT_MAX ));
-    for(int i=0;i<cp_s;i++) {
-        weights.push_back(vector<int>(cp_s, INT_MAX));
-        dfs_wt.push_back(vector<int>(height*width, INT_MAX));
+    weights.resize(cp_s , vector<int>( cp_s , INT_MAX ));
+    dfs_wt.resize(cp_s, vector<int>(height*width, INT_MAX));
+    hamiltonian_length.resize(cp_s, (vector<int>(cp_s-2,INT_MAX)));
 
-        hamiltonian_length.push_back(vector<int>(cp_s-2,INT_MAX));
+    for(int i=0;i<cp_s;i++) {
         vector<checkpoint_node*> temp;
         for(int j=0;j<pow(2, cp_s-2);j++) {
             checkpoint_node* cp_n = new checkpoint_node(i,j,cp_s-2);
