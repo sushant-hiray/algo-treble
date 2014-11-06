@@ -3,6 +3,7 @@
 #include <vector>
 #include <cstring>
 #include <list>
+#include <stack>
 #include <queue>
 #include <cmath>
 #define INT_MAX 1000000009
@@ -34,15 +35,17 @@ struct node {
     int id;
     int wt;
     int val;
+    int cp_id;
     location l;
     bool visited;
     list<edge*> neighbors;
-    node(int v, int i, int j) {
+    node(int v, int i, int j, int cp=-1) {
         l.x = i;
         l.y = j;
         val = v;
         visited = false;
         wt = INT_MAX;
+        cp_id = cp;
     }
     void print() {
         cout << wt << " | ";
@@ -157,6 +160,9 @@ private:
     void calc_weights();
     void generate_cp_graph();
     int find_min();
+    void dfs(node*);
+
+
     template<typename T>
     int shortest_path(T*, T* );
     
@@ -178,18 +184,19 @@ void Orienteering::main()
 {
     parse_input();
     init_graph();
-    // print_maze();
     calc_weights();
-    generate_cp_graph();
+    print_cp_weights();
+    
+    // generate_cp_graph();
     // print_cp();
-    cout << "ANS is " << find_min() << endl;
-    // print_cp_weights();
+    // cout << "ANS is " << find_min() << endl;
     
 }
 
 void Orienteering::parse_input()
 {
     cin >>width>>height;
+    int count = 0;
     for(int i=0;i<height;i++) {
         std::vector<node*> t;
         for (int j = 0; j < width; j++) {
@@ -201,9 +208,10 @@ void Orienteering::parse_input()
                     t.push_back(n);
                     break;
                 } case '@' : {
-                    node* n = new node(2,i,j);
+                    node* n = new node(2,i,j,count);
                     checkpoint.push_back(location(i,j));
                     t.push_back(n);
+                    count++;
                     break;
                 } case '.' : {
                     node* n = new node(1,i,j);
@@ -229,14 +237,20 @@ void Orienteering::parse_input()
         }
         maze.push_back(t);
     }
-
+    checkpoint.push_back(start);
+    checkpoint.push_back(end);
     cp_s = checkpoint.size();
+    
+    maze[start.x][start.y]->cp_id = cp_s-2;
+    maze[end.x][end.y]->cp_id = cp_s-1;
+    
+    cout << cp_s << endl;
     for(int i=0;i<cp_s;i++) {
         weights.push_back(vector<int>(cp_s, INT_MAX));
-        hamiltonian_length.push_back(vector<int>(cp_s, INT_MAX));
+        hamiltonian_length.push_back(vector<int>(cp_s-2,INT_MAX));
         vector<checkpoint_node*> temp;
-        for(int j=0;j<pow(2, cp_s);j++) {
-            checkpoint_node* cp_n = new checkpoint_node(i,j, cp_s);
+        for(int j=0;j<pow(2, cp_s-2);j++) {
+            checkpoint_node* cp_n = new checkpoint_node(i,j,cp_s-2);
             temp.push_back(cp_n);
         }
         cp_nodes.push_back(temp);
@@ -314,13 +328,6 @@ void Orienteering::print_cp_weights()
         }
         cout << endl;
     }
-    cout << "hamiltonian_length are :"<<endl;
-    for(int i=0;i<cp_s;i++) {
-        for(int j=0;j<cp_s;j++) {
-            cout << hamiltonian_length[i][j] << " ";
-        }
-        cout << endl;
-    }
 }
 
 void Orienteering::init_graph()
@@ -363,6 +370,7 @@ void Orienteering::generate_cp_graph()
             }
         }
     }
+
 }
 
 template<typename T>
@@ -397,21 +405,36 @@ int Orienteering::shortest_path(T* cur, T* end) {
     return INT_MAX;
 }
 
-void Orienteering::calc_weights()
+void Orienteering::dfs(node* cur)
 {
-    for(int i=0;i<checkpoint.size();i++) {
-        for(int j=0;j<checkpoint.size();j++) {
-            if (i==j)
-                weights[i][j]=0;
-            else if (j < i)
-                weights[i][j] = weights[j][i];
-            else {
-                reset_graph<node>(maze);
-                maze[checkpoint[i].x][checkpoint[i].y]->wt=0;
-                weights[i][j] = shortest_path<node>(maze[checkpoint[i].x][checkpoint[i].y], 
-                                maze[checkpoint[j].x][checkpoint[j].y]);
+    reset_graph<node>(maze);
+    cur->wt=0;
+    int count = 0;
+    stack<node*> pq;
+    pq.push(cur);
+    int cp_index = cur->cp_id;
+    while(!pq.empty()) {
+        cur = pq.top();
+        if (cur->val==2 || cur->val==3 || cur->val==4) {
+            weights[cp_index][cur->cp_id] = cur->wt;
+            count++;
+        } 
+        if (count == cp_s)
+            break;
+        pq.pop();
+        for(auto it = cur->neighbors.begin(); it!=cur->neighbors.end();it++) {
+            if ((*it)->a->wt >  cur->wt + (*it)->weight) {
+                (*it)->a->wt = cur->wt+(*it)->weight;
+                pq.push((*it)->a);
             }
         }
+    }
+}
+
+void Orienteering::calc_weights()
+{
+    for(int i=0; i<checkpoint.size();i++) {
+        dfs(maze[checkpoint[i].x][checkpoint[i].y]);
     }
 }
 
