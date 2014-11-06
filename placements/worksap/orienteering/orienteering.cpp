@@ -37,13 +37,11 @@ struct node {
     int val;
     int cp_id;
     location l;
-    bool visited;
     list<edge*> neighbors;
     node(int v, int i, int j, int cp=-1) {
         l.x = i;
         l.y = j;
         val = v;
-        visited = false;
         wt = INT_MAX;
         cp_id = cp;
     }
@@ -52,7 +50,6 @@ struct node {
         l.print();
     }
     void reset() {
-        visited = false;
         wt = INT_MAX;
     }
 
@@ -77,7 +74,6 @@ struct checkpoint_node
     int cp_id; 
     int node_id;
     int wt;
-    bool visited;
     string nid_str;
     list<checkpoint_edge*> neighbors;
 
@@ -86,8 +82,7 @@ struct checkpoint_node
     checkpoint_node(int c,int n, int m, int w=INT_MAX) {
         cp_id = c;
         node_id = n;
-        vector<int> wt;
-        visited = false;
+        wt = w;
         string str(m,'0');
         int i=m-1;
         while(i>=0) {
@@ -105,7 +100,6 @@ struct checkpoint_node
     }
 
     void reset() {
-        visited = false;
         wt = INT_MAX;
     }
 
@@ -200,12 +194,12 @@ void Orienteering::main()
 {
     parse_input();
     init_graph();
-    print_maze();
+    // print_maze();
     calc_weights();
-    print_cp_weights();
+    // print_cp_weights();
     
     generate_cp_graph();
-    print_cp();
+    // print_cp();
     cout << "ANS is " << find_min() << endl;
     
 }
@@ -324,6 +318,14 @@ void Orienteering::print_cp()
     }
     cout << endl;
 
+    st_node->print();
+    cout << "--->";
+    for(auto it = st_node->neighbors.begin(); it!=st_node->neighbors.end();it++) {
+        cout << "<" << (*it)->weight << "> ";
+        ((*it)->a)->print();
+        cout << ", ";
+    }
+    cout << "}"<<endl;
     for(int i=0;i<cp_s-2;i++) {
         for(int j=0;j<cp_nodes[i].size();j++) {
             cout << "{";
@@ -423,7 +425,6 @@ int Orienteering::shortest_path(T* cur, T* end) {
     pq.push(cur);
     while(!pq.empty()) {
         cur = pq.top();
-        cur->visited=true;
         if (cur->eq(*end)) {
             return cur->wt;
         } else {
@@ -490,8 +491,6 @@ int Orienteering::find_min()
         min_length += shortest_path<node>(maze[checkpoint[0].x][checkpoint[0].y],  maze[end.x][end.y]);
         return min_length;
     } else {
-
-        reset_graph<checkpoint_node>(cp_nodes);
         st_node->wt = 0;
         min_length = shortest_path<checkpoint_node>(st_node, end_node);
         return min_length;
