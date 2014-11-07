@@ -9,9 +9,6 @@
 #define INT_MAX 1000000009
 using namespace std;
 
-struct edge;
-struct checkpoint_edge;
-
 struct location {
     int x;
     int y;
@@ -58,17 +55,6 @@ struct node {
         return l.eq(n.l);
     }
 };
-
-struct edge
-{
-    int weight;
-    node* a;
-    edge(node* _a, int wt) {
-        a = _a;
-        weight = wt;
-    }
-};
-
 
 struct checkpoint_node
 {
@@ -525,12 +511,14 @@ void Orienteering::calc_weights()
 int Orienteering::find_min()
 {
     int min_length;
-    if (cp_s == 0) {
+    int cp_s_left = cp_s-2;
+    if (cp_s_left == 0) {
+        cout << "here" << endl;
         reset_graph<node>(maze);
         maze[start.x][start.y]->wt=0;
         min_length = shortest_path<node>(maze[start.x][start.y], maze[end.x][end.y]);
         return min_length;
-    } else if (cp_s == 1) {
+    } else if (cp_s_left == 1) {
         reset_graph<node>(maze);
         maze[start.x][start.y]->wt=0;
         min_length = shortest_path<node>(maze[start.x][start.y], maze[checkpoint[0].x][checkpoint[0].y]);
