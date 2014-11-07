@@ -38,7 +38,6 @@ struct node {
     int val;
     int cp_id;
     location l;
-    list<edge*> neighbors;
     node(int v, int i, int j, int cp, int d) {
         l.x = i;
         l.y = j;
@@ -138,10 +137,8 @@ class Orienteering
 {
 private:
     vector<vector<node*> > maze;
-    // vector<vector<checkpoint_node*> > cp_nodes;
     vector<location> checkpoint;
     vector<vector<int> > weights;
-    // vector<vector<int> > dfs_wt;
     int width;
     int height;
     int cp_s;
@@ -161,14 +158,12 @@ private:
     void calc_weights();
     void generate_cp_graph();
     int find_min();
-    void dfs(node*,int);
-    void dfs_new(node*);
+    void dfs(node*);
 
 
     template<typename T>
     int shortest_path(T*, T* );
     int shortest_cp_path(checkpoint_node*, checkpoint_node* );
-    int shortest_cp_path_new(checkpoint_node*, checkpoint_node* );
     template<typename T>  
     void reset_graph(vector<vector<T*>> &);
     
@@ -188,10 +183,11 @@ Orienteering::Orienteering()
 void Orienteering::main()
 {
     parse_input();
-    init_graph();
+    // init_graph();
     // // print_maze();
     calc_weights();
-    // // print_cp_weights();
+    // print_cp();
+    // print_cp_weights();
     
     // // print_cp();
     cout << "ANS is " << find_min() <<endl;
@@ -252,8 +248,8 @@ void Orienteering::parse_input()
     maze[start.x][start.y]->cp_id = cp_s-2;
     maze[end.x][end.y]->cp_id = cp_s-1;
     weights.resize(cp_s , vector<int>( cp_s , INT_MAX ));
-    // dfs_wt.resize(cp_s, vector<int>(height*width, INT_MAX));
     hamiltonian_length.resize(cp_s, (vector<int>(pow(2,cp_s-2),INT_MAX)));
+    
     // for(int i=0;i<cp_s;i++) {
     //     vector<checkpoint_node*> temp;
     //     for(int j=0;j<pow(2, cp_s-2);j++) {
@@ -294,10 +290,10 @@ void Orienteering::print_maze()
             cout << "{";
             maze[i][j]->print();
             cout << "--->";
-            for(list<edge*>::iterator it = maze[i][j]->neighbors.begin(); it!= maze[i][j]->neighbors.end(); it++) {
-                ((*it)->a)->print();
-                cout << ", ";
-            }
+            // for(list<edge*>::iterator it = maze[i][j]->neighbors.begin(); it!= maze[i][j]->neighbors.end(); it++) {
+            //     ((*it)->a)->print();
+            //     cout << ", ";
+            // }
             cout << "}"<<endl;
         }
         cout << endl;
@@ -311,8 +307,11 @@ void Orienteering::print_cp()
         cout << " ";
     }
     cout << endl;
-
-    st_node->print();
+    for(int j=0;j<cp_s;j++) {
+        cout << weights[0][j] << " ";
+    }
+    cout << endl;
+    // st_node->print();
     // cout << "--->";
     // for(auto it = st_node->neighbors.begin(); it!=st_node->neighbors.end();it++) {
     //     cout << "<" << (*it)->weight << "> ";
@@ -354,70 +353,29 @@ void Orienteering::print_cp_weights()
 
 void Orienteering::init_graph()
 {
-    for(int i=0;i<height;i++) {
-        for(int j=0;j<width;j++) {
-            int addx = -1;
-            int addy = -1;
-            if (maze[i][j]->val!=-1) {
-                for(;addx<=1;addx+=2) {
-                    if ((i+addx>=0) && (i+addx<height) && maze[i+addx][j]->val!=-1) {
-                            edge* e = new edge(maze[i+addx][j], 1);
-                            (maze[i][j]->neighbors).push_back(e);
-                    }
-                }
-                for(;addy<=1;addy+=2) {
-                    if ((j+addy>=0) && (j+addy<width) && maze[i][j+addy]->val!=-1) {
-                        edge* e = new edge(maze[i][j+addy], 1);
-                        (maze[i][j]->neighbors).push_back(e);
-                    }
-                }
-            }
-        }
-    }
-}
-
-int Orienteering::shortest_cp_path(checkpoint_node* cur, checkpoint_node* end) {
-    // priority_queue<checkpoint_node*, std::vector<checkpoint_node*>, node_comparison> pq;
-    // int cp_s_left = cp_s - 2;
-    // for(int i=0; i<cp_s_left;i++) {
-    //     int new_id = pow(2, cp_s_left-i-1);
-    //     cp_nodes[i][new_id]->wt = weights[i][cp_s_left];
-    //     pq.push(cp_nodes[i][new_id]);
-    // }
-    
-    // while(!pq.empty()) {
-    //     cur = pq.top();
-    //     if (cur->eq(*end)) {
-    //         return cur->wt;
-    //     } else {
-    //         pq.pop();
-    //         int i = cur->cp_id;
-    //         int j = cur->node_id;
-    //         int wt;
-    //         string str = cp_nodes[i][j]->nid_str;
-    //         for(int k=0;k <cp_s_left;k++) {
-    //             if (str[k]=='0' && i!=k) {
-    //                 int new_id = j + pow(2, cp_s_left - 1 - k);
-    //                 wt = weights[i][k];
-    //                 if (cp_nodes[k][new_id]->wt > cur->wt + wt) {
-    //                     cp_nodes[k][new_id]->wt = cur->wt + wt;
-    //                     pq.push(cp_nodes[k][new_id]);
+    // for(int i=0;i<height;i++) {
+    //     for(int j=0;j<width;j++) {
+    //         int addx = -1;
+    //         int addy = -1;
+    //         if (maze[i][j]->val!=-1) {
+    //             for(;addx<=1;addx+=2) {
+    //                 if ((i+addx>=0) && (i+addx<height) && maze[i+addx][j]->val!=-1) {
+    //                         edge* e = new edge(maze[i+addx][j], 1);
+    //                         (maze[i][j]->neighbors).push_back(e);
     //                 }
-    //             } 
-    //         }
-    //         if (j==pow(2,cp_s_left)-1) {
-    //             wt =  weights[i][cp_s_left+1];
-    //             if (end_node->wt > cur->wt + wt) {
-    //                 end_node->wt = cur->wt + wt;
-    //                 pq.push(end_node);
+    //             }
+    //             for(;addy<=1;addy+=2) {
+    //                 if ((j+addy>=0) && (j+addy<width) && maze[i][j+addy]->val!=-1) {
+    //                     edge* e = new edge(maze[i][j+addy], 1);
+    //                     (maze[i][j]->neighbors).push_back(e);
+    //                 }
     //             }
     //         }
     //     }
     // }
-    return INT_MAX;
 }
 
-int Orienteering::shortest_cp_path_new(checkpoint_node* start, checkpoint_node* end) {
+int Orienteering::shortest_cp_path(checkpoint_node* start, checkpoint_node* end) {
     priority_queue<location, std::vector<location>, node_comparison> pq;
     int cp_s_left = cp_s - 2;
     int max_pow = pow(2, cp_s_left)-1;
@@ -491,10 +449,24 @@ int Orienteering::shortest_path(T* cur, T* end) {
             return cur->wt;
         } else {
             pq.pop();
-            for(auto it = cur->neighbors.begin(); it!=cur->neighbors.end();it++) {
-                if ((*it)->a->wt >  cur->wt + (*it)->weight) {
-                    (*it)->a->wt = cur->wt+(*it)->weight;
-                    pq.push((*it)->a);
+            int i = cur->l.x;
+            int j = cur->l.y;
+
+            for(int k=j-1;k<=j+1;k+=2) {
+                if(k>=0 && k<width && maze[i][k]->val<=4 && maze[i][k]->val>=1) {
+                    if (maze[i][k]->wt > cur->wt + 1) {
+                        maze[i][k]->wt = cur->wt + 1;
+                        pq.push(maze[i][k]);
+                    }
+                }
+            }
+
+            for(int k=i-1;k<=i+1;k+=2) {
+                if(k>=0 && k<height && maze[k][j]->val<=4 && maze[k][j]->val>=1) {
+                    if (maze[k][j]->wt > cur->wt + 1) {
+                        maze[k][j]->wt = cur->wt + 1;
+                        pq.push(maze[k][j]);
+                    }
                 }
             }
         }
@@ -503,35 +475,7 @@ int Orienteering::shortest_path(T* cur, T* end) {
 }
 
 
-void Orienteering::dfs(node* cur, int i)
-{
-    // cur->wt=0;
-    // dfs_wt[i][cur->id] = 0;
-    // int count = 0;
-    // priority_queue<node*, std::vector<node*>, node_comparison> pq;
-    // pq.push(cur);
-    // int cp_index = cur->cp_id;
-    // while(!pq.empty()) {
-    //     cur = pq.top();
-    //     if (cur->val==2 || cur->val==3 || cur->val==4) {
-    //         weights[cp_index][cur->cp_id] = dfs_wt[i][cur->id];
-    //         count++;
-    //     } 
-    //     if (count == cp_s)
-    //         break;
-    //     pq.pop();
-    //     for(auto it = cur->neighbors.begin(); it!=cur->neighbors.end();it++) {
-    //         if (dfs_wt[i][(*it)->a->id] > dfs_wt[i][cur->id] + (*it)->weight) {
-    //             dfs_wt[i][(*it)->a->id] = dfs_wt[i][cur->id] + (*it)->weight;
-    //             (*it)->a->wt = dfs_wt[i][(*it)->a->id];
-    //             pq.push((*it)->a);
-    //         }
-    //     }
-    // }
-}
-
-
-void Orienteering::dfs_new(node* cur)
+void Orienteering::dfs(node* cur)
 {
     cur->wt=0;
     int count = 0;
@@ -547,10 +491,24 @@ void Orienteering::dfs_new(node* cur)
         if (count == cp_s)
             break;
         pq.pop();
-        for(auto it = cur->neighbors.begin(); it!=cur->neighbors.end();it++) {
-            if ((*it)->a->wt > cur->wt + (*it)->weight) {
-                (*it)->a->wt = cur->wt + (*it)->weight;
-                pq.push((*it)->a);
+        int i = cur->l.x;
+        int j = cur->l.y;
+
+        for(int k=j-1;k<=j+1;k+=2) {
+            if(k>=0 && k<width && maze[i][k]->val<=4 && maze[i][k]->val>=1) {
+                if (maze[i][k]->wt > cur->wt + 1) {
+                    maze[i][k]->wt = cur->wt + 1;
+                    pq.push(maze[i][k]);
+                }
+            }
+        }
+
+        for(int k=i-1;k<=i+1;k+=2) {
+            if(k>=0 && k<height && maze[k][j]->val<=4 && maze[k][j]->val>=1) {
+                if (maze[k][j]->wt > cur->wt + 1) {
+                    maze[k][j]->wt = cur->wt + 1;
+                    pq.push(maze[k][j]);
+                }
             }
         }
     }
@@ -560,7 +518,7 @@ void Orienteering::calc_weights()
 {
     for(int i=0; i<checkpoint.size();i++) {
         reset_graph<node>(maze);
-        dfs_new(maze[checkpoint[i].x][checkpoint[i].y]);
+        dfs(maze[checkpoint[i].x][checkpoint[i].y]);
     }
 }
 
@@ -583,7 +541,7 @@ int Orienteering::find_min()
         return min_length;
     } else {
         st_node->wt = 0;
-        min_length = shortest_cp_path_new(st_node, end_node);
+        min_length = shortest_cp_path(st_node, end_node);
         return min_length;
     }
 }
