@@ -200,16 +200,35 @@ private:
     // prints the location of the checkpoints
     void print_cp();
 
-    // 
+    // prints the weight matrix
+    // cost of path for every pair of checkpoints
     void print_cp_weights();
+
+    // calculates the weight matrix
     void calc_weights();
-    void generate_cp_graph();
+
+    // finds the shortest path from start node to end node
+    // abiding the constraints that every checkpoint should be
+    // visited atleast once
     int find_min();
+
+    // generates graph dynamically till it visits all the checkpoint 
+    // nodes
+    // finds the shortest path with all the nodes from the parameter.
     void dfs(node*);
 
-
+    // templatised version of shortest path.
+    // It finds the shortest path if graph is already generated
+    // find the shortest path from start node to end node
     template<typename T>
-    int shortest_path(T*, T* );
+    int shortest_path(T* start, T* end);
+
+    // finds the shortest path from start to end
+    // It finds the shortest path by dynamically adding new nodes
+    // i.e without explicilty generating the graph
+    // This function has a huge improvement over shortest_path
+    // function as it doesnot carry the overhead of generating
+    // the entire graph
     int shortest_cp_path(checkpoint_node*, checkpoint_node* );
 
     // resets the entire graph
@@ -218,13 +237,17 @@ private:
     void reset_graph(vector<vector<T*>> &);
     
 public:
+    // default constructor
     Orienteering();
+
+    // main function: calls the relevant functions to find the shortest path
     void main();
 };
 
 
 Orienteering::Orienteering()
 {
+    // Initialising the private nodes
     st_node = new checkpoint_node();
     end_node = new checkpoint_node();
     return;
@@ -233,18 +256,13 @@ Orienteering::Orienteering()
 void Orienteering::main()
 {
     parse_input();
-    // // print_maze();
     calc_weights();
-    // print_cp();
-    // print_cp_weights();
-    cout << find_min() <<endl;
-    
+    cout << find_min() <<endl;  
 }
 
 void Orienteering::parse_input()
 {
     cin >>width>>height;
-
     int count = 0;
     for(int i=0;i<height;i++) {
         std::vector<node*> t;
@@ -296,15 +314,6 @@ void Orienteering::parse_input()
     maze[end.x][end.y]->cp_id = cp_s-1;
     weights.resize(cp_s , vector<int>( cp_s , INT_MAX ));
     hamiltonian_length.resize(cp_s, (vector<int>(pow(2,cp_s-2),INT_MAX)));
-    
-    // for(int i=0;i<cp_s;i++) {
-    //     vector<checkpoint_node*> temp;
-    //     for(int j=0;j<pow(2, cp_s-2);j++) {
-    //         checkpoint_node* cp_n = new checkpoint_node(i,j,cp_s-2);
-    //         temp.push_back(cp_n);
-    //     }
-    //     cp_nodes.push_back(temp);
-    // }
 }
 
 
@@ -354,27 +363,6 @@ void Orienteering::print_cp()
         cout << " ";
     }
     cout << endl;
-    // st_node->print();
-    // cout << "--->";
-    // for(auto it = st_node->neighbors.begin(); it!=st_node->neighbors.end();it++) {
-    //     cout << "<" << (*it)->weight << "> ";
-    //     ((*it)->a)->print();
-    //     cout << ", ";
-    // }
-    // cout << "}"<<endl;
-    // for(int i=0;i<cp_s-2;i++) {
-    //     for(int j=0;j<cp_nodes[i].size();j++) {
-    //         cout << "{";
-    //         cp_nodes[i][j]->print();
-    //         cout << "--->";
-    //         for(auto it = cp_nodes[i][j]->neighbors.begin(); it!= cp_nodes[i][j]->neighbors.end(); it++) {
-    //             cout << "<" << (*it)->weight << "> ";
-    //             ((*it)->a)->print();
-    //             cout << ", ";
-    //         }
-    //         cout << "}"<<endl;
-    //     }
-    // }
 }
 
 void Orienteering::print_cp_weights()
