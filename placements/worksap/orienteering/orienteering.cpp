@@ -362,7 +362,8 @@ void Orienteering::init_graph()
 }
 
 int Orienteering::shortest_cp_path(checkpoint_node* start, checkpoint_node* end) {
-    priority_queue<location, std::vector<location>, node_comparison> pq;
+    // priority_queue<location, std::vector<location>, node_comparison> pq;
+    queue<location> pq;
     int cp_s_left = cp_s - 2;
     int max_pow = pow(2, cp_s_left)-1;
     for(int i=0; i<cp_s_left;i++) {
@@ -373,7 +374,7 @@ int Orienteering::shortest_cp_path(checkpoint_node* start, checkpoint_node* end)
     location cur;
     location final(cp_s_left+1, max_pow);
     while(!pq.empty()) {
-        cur = pq.top();
+        cur = pq.front();
         if (cur.eq(final)) {
             return hamiltonian_length[cur.x][cur.y];
         } else {
