@@ -260,6 +260,9 @@ void Orienteering::main()
     cout << find_min() <<endl;  
 }
 
+// parses the input, generates the maze
+// initializes weights vector and hamiltonian_lengths
+// depending on the number of checkpoints
 void Orienteering::parse_input()
 {
     cin >>width>>height;
@@ -270,6 +273,7 @@ void Orienteering::parse_input()
         cin >> str;
         for (int j = 0; j < width; j++) {
             char ch = str[j];
+            // parse the character and handle appropriate case
             switch(ch) {
                 case '#' : {
                     node* n = new node(-1,i,j,-1,i*width+j);
@@ -305,18 +309,22 @@ void Orienteering::parse_input()
         }
         maze.push_back(t);
     }
+    // also add start and end location in the checkpoint vector
     checkpoint.push_back(start);
     checkpoint.push_back(end);
-
+    // initialize cp_s with the checkpoint size
     cp_s = checkpoint.size();
     
+    // update the cp_id for start and end nodes
     maze[start.x][start.y]->cp_id = cp_s-2;
     maze[end.x][end.y]->cp_id = cp_s-1;
+
+    // allocate space for the weights matrix and hamiltonian length matrix
     weights.resize(cp_s , vector<int>( cp_s , INT_MAX ));
     hamiltonian_length.resize(cp_s, (vector<int>(pow(2,cp_s-2),INT_MAX)));
 }
 
-
+// decode i and print relevant character
 void Orienteering::print_index(int i)
 {
     switch(i) {
@@ -339,23 +347,18 @@ void Orienteering::print_index(int i)
     }
 }
 
+// prints the maze by showing extra information corresponding to each node
 void Orienteering::print_maze()
 {
     for(int i=0;i<maze.size();i++) {
         for(int j=0;j<maze[i].size();j++) {
-            cout << "{";
             maze[i][j]->print();
-            cout << "--->";
-            // for(list<edge*>::iterator it = maze[i][j]->neighbors.begin(); it!= maze[i][j]->neighbors.end(); it++) {
-            //     ((*it)->a)->print();
-            //     cout << ", ";
-            // }
-            cout << "}"<<endl;
         }
         cout << endl;
     }
 }
 
+// prints the entire checkpoint vector
 void Orienteering::print_cp()
 {
     for(int i=0;i<checkpoint.size();i++) {
@@ -365,6 +368,8 @@ void Orienteering::print_cp()
     cout << endl;
 }
 
+// prints all possible costs of travelling from one checkpoint to another
+// [note:] includes the distances from start node and end node
 void Orienteering::print_cp_weights()
 {
     for(int i=0;i<cp_s;i++) {
@@ -375,24 +380,32 @@ void Orienteering::print_cp_weights()
     }
 }
 
+// generates a graph by mapping bitsets with checkpoint id.
+// for eg: corresponding to each id: we have nodes: 1000 1001 1010 1111 etc.. 
+// depending on the number of checkpoints
+// note that all bitsets have one thing in common. 1st bit is set for all of them.
+// these are bitsets for checkpoint node 3
+// Goal is to start from 0000 and reach 1111 
+// each bitset represents a checkpoint, when we reach 1111 we are sure that we've
+// visited all the checkpoints.
 int Orienteering::shortest_cp_path(checkpoint_node* start, checkpoint_node* end) {
     queue<location> pq;
     int cp_s_left = cp_s - 2;
     int max_pow = (1<<(cp_s_left))-1;
 
-
+    // Initially add all the locations which have one bit set.
+    // We can visit only these nodes directly from the start node.
+    // hamiltonian_length[i][j] will store the cost of visiting i,j from start
     for(int i=0; i<cp_s_left;i++) {
         int new_id = pow(2, i);
         hamiltonian_length[i][new_id] = weights[i][cp_s_left];
         pq.push(location(i,new_id));
     }
 
-
-
     location cur;
     location final(cp_s_left+1, max_pow);
 
-
+    // keep on popping the top element, until we reach the end node
     while(!pq.empty()) {
         cur = pq.front();
         if (cur.eq(final)) {
@@ -405,6 +418,9 @@ int Orienteering::shortest_cp_path(checkpoint_node* start, checkpoint_node* end)
             
             int str = j;
             
+            // check all the valid neighbors and push them in the queue
+            // if their existing weight is more than the weight of current node
+            // and hamiltonian_length between the nodes
             for(char k=0;k <cp_s_left;k++) {
                 if (!(str&1) && i!=k) {
                     int new_id = j | (1<<(k));
@@ -417,6 +433,7 @@ int Orienteering::shortest_cp_path(checkpoint_node* start, checkpoint_node* end)
                 }
                 str = str >> 1;
             }
+            // if j is 11111... add end node as its neighbor 
             if (j==max_pow) {
                 wt =  weights[i][cp_s_left+1];
                 wt+=  hamiltonian_length[cur.x][cur.y];
@@ -432,6 +449,7 @@ int Orienteering::shortest_cp_path(checkpoint_node* start, checkpoint_node* end)
 
 }
 
+// reset the weights of the graph
 template<typename T>
 void Orienteering::reset_graph(vector<vector<T*>>& graph)
 {
@@ -442,6 +460,9 @@ void Orienteering::reset_graph(vector<vector<T*>>& graph)
     }
 }
 
+// Templatised version of shortest path
+// Implements djikstra algorithm to find the shortest path
+// between start and end.
 template<typename T>
 int Orienteering::shortest_path(T* cur, T* end) {
     priority_queue<T*, std::vector<T*>, node_comparison> pq;
@@ -477,25 +498,39 @@ int Orienteering::shortest_path(T* cur, T* end) {
     return INT_MAX;
 }
 
-
+// Generates the graph by making cur as the root node
+// and thus finds shortest path to all the checkpoints
+// stores the shortest paths in the weights[][]
 void Orienteering::dfs(node* cur)
 {
     cur->wt=0;
     int count = 0;
     priority_queue<node*, std::vector<node*>, node_comparison> pq;
+
+    // initialise the priority queue by pushing the start node
     pq.push(cur);
     int cp_index = cur->cp_id;
     while(!pq.empty()) {
         cur = pq.top();
         if (cur->val==2 || cur->val==3 || cur->val==4) {
+            // if current node is a checkpoint, increment the count
+            // and store the value in weights[][]
             weights[cp_index][cur->cp_id] = cur->wt;
             count++;
         } 
+        // found all the checkpoints
+        // time to end the work.
         if (count == cp_s)
             break;
+
         pq.pop();
         int i = cur->l.x;
         int j = cur->l.y;
+
+        // traverse all the neighbors and find the valid neigbors
+        // push the neighbors in the priority queue if the weight of neighbor
+        // is less than weight of current node and distance between current node
+        // and the neighbor
 
         for(int k=j-1;k<=j+1;k+=2) {
             if(k>=0 && k<width && maze[i][k]->val<=4 && maze[i][k]->val>=1) {
@@ -517,24 +552,33 @@ void Orienteering::dfs(node* cur)
     }
 }
 
+// calculates minimum distance between every pair of checkpoints
+// by calling dfs for each node and building the tree enroute
 void Orienteering::calc_weights()
 {
     for(int i=0; i<checkpoint.size();i++) {
+        // reset the weights before calling dfs
         reset_graph<node>(maze);
         dfs(maze[checkpoint[i].x][checkpoint[i].y]);
     }
 }
 
+// finds the minimum distance between start and end node by visiting all the
+// checkpoints atleast once.
 int Orienteering::find_min()
 {
     int min_length;
     int cp_s_left = cp_s-2;
     if (cp_s_left == 0) {
+        // if there are no checkpoints, ans is simply the shortest path between start node
+        // and end node
         reset_graph<node>(maze);
         maze[start.x][start.y]->wt=0;
         min_length = shortest_path<node>(maze[start.x][start.y], maze[end.x][end.y]);
         return min_length;
     } else if (cp_s_left == 1) {
+        // if there is only one checkpoint, ans is shortest path from start to checkpoint
+        // and from checkpoint to endnode
         reset_graph<node>(maze);
         maze[start.x][start.y]->wt=0;
         min_length = shortest_path<node>(maze[start.x][start.y], maze[checkpoint[0].x][checkpoint[0].y]);
@@ -544,6 +588,9 @@ int Orienteering::find_min()
         min_length += shortest_path<node>(maze[checkpoint[0].x][checkpoint[0].y],  maze[end.x][end.y]);
         return min_length;
     } else {
+        // if there are more than one checkpoints, set the weight of start node 0
+        // and call the shortest_cp_path which gives the desirec ans.
+        // further details: look into shortest_cp_paths
         st_node->wt = 0;
         min_length = shortest_cp_path(st_node, end_node);
         return min_length;
