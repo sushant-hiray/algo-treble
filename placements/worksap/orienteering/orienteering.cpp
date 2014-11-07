@@ -76,7 +76,6 @@ struct checkpoint_node
     int node_id;
     int wt;
     string nid_str;
-    list<checkpoint_edge*> neighbors;
     
     checkpoint_node(int c,int n, int m, int w=INT_MAX) {
         cp_id = c;
@@ -112,16 +111,6 @@ struct checkpoint_node
 
     bool is_valid() {
         return (nid_str[cp_id]=='1' ? true : false);
-    }
-};
-
-struct checkpoint_edge
-{
-    int weight;
-    checkpoint_node* a;
-    checkpoint_edge(checkpoint_node* _a, int wt) {
-        a = _a;
-        weight = wt;
     }
 };
 
@@ -194,12 +183,11 @@ void Orienteering::main()
 {
     parse_input();
     init_graph();
-    // print_maze();
+    // // print_maze();
     calc_weights();
-    // print_cp_weights();
+    // // print_cp_weights();
     
-    // generate_cp_graph();
-    // print_cp();
+    // // print_cp();
     cout << "ANS is " << find_min() <<endl;
     
 }
@@ -320,26 +308,26 @@ void Orienteering::print_cp()
     cout << endl;
 
     st_node->print();
-    cout << "--->";
-    for(auto it = st_node->neighbors.begin(); it!=st_node->neighbors.end();it++) {
-        cout << "<" << (*it)->weight << "> ";
-        ((*it)->a)->print();
-        cout << ", ";
-    }
-    cout << "}"<<endl;
-    for(int i=0;i<cp_s-2;i++) {
-        for(int j=0;j<cp_nodes[i].size();j++) {
-            cout << "{";
-            cp_nodes[i][j]->print();
-            cout << "--->";
-            for(auto it = cp_nodes[i][j]->neighbors.begin(); it!= cp_nodes[i][j]->neighbors.end(); it++) {
-                cout << "<" << (*it)->weight << "> ";
-                ((*it)->a)->print();
-                cout << ", ";
-            }
-            cout << "}"<<endl;
-        }
-    }
+    // cout << "--->";
+    // for(auto it = st_node->neighbors.begin(); it!=st_node->neighbors.end();it++) {
+    //     cout << "<" << (*it)->weight << "> ";
+    //     ((*it)->a)->print();
+    //     cout << ", ";
+    // }
+    // cout << "}"<<endl;
+    // for(int i=0;i<cp_s-2;i++) {
+    //     for(int j=0;j<cp_nodes[i].size();j++) {
+    //         cout << "{";
+    //         cp_nodes[i][j]->print();
+    //         cout << "--->";
+    //         for(auto it = cp_nodes[i][j]->neighbors.begin(); it!= cp_nodes[i][j]->neighbors.end(); it++) {
+    //             cout << "<" << (*it)->weight << "> ";
+    //             ((*it)->a)->print();
+    //             cout << ", ";
+    //         }
+    //         cout << "}"<<endl;
+    //     }
+    // }
 }
 
 void Orienteering::print_cp_weights()
@@ -383,40 +371,6 @@ void Orienteering::init_graph()
     }
 }
 
-void Orienteering::generate_cp_graph()
-{
-    int cp_s_left = cp_s - 2;
-
-    st_node->cp_id = 0;
-    st_node->node_id = 0;
-    end_node->cp_id = INT_MAX;
-    end_node->node_id = INT_MAX;
-
-    for(int i=0; i<cp_s_left;i++) {
-        int new_id = pow(2, cp_s_left-i-1);
-        checkpoint_edge* e = new checkpoint_edge(cp_nodes[i][new_id], weights[i][cp_s_left]);
-        (st_node->neighbors).push_back(e);
-    }
-    for(int i=0; i<cp_s_left;i++) {
-        for(int j=0; j < pow(2,cp_s_left);j++) {
-            if (cp_nodes[i][j]->is_valid()) {
-                string str = cp_nodes[i][j]->nid_str;
-                for(int k=0;k <cp_s_left;k++) {
-                    if (str[k]=='0' && i!=k) {
-                        int new_id = j + pow(2, cp_s_left - 1 - k);
-                        checkpoint_edge* e = new checkpoint_edge(cp_nodes[k][new_id], weights[i][k]);
-                        (cp_nodes[i][j]->neighbors).push_back(e);
-                    } 
-                }
-                if (j==pow(2,cp_s_left)-1) {
-                    checkpoint_edge* e = new checkpoint_edge(end_node, weights[i][cp_s_left+1]);
-                    (cp_nodes[i][j]->neighbors).push_back(e);
-                }
-            }
-        }
-    }
-}
-
 int Orienteering::shortest_cp_path(checkpoint_node* cur, checkpoint_node* end) {
     priority_queue<checkpoint_node*, std::vector<checkpoint_node*>, node_comparison> pq;
     int cp_s_left = cp_s - 2;
@@ -434,22 +388,20 @@ int Orienteering::shortest_cp_path(checkpoint_node* cur, checkpoint_node* end) {
             pq.pop();
             int i = cur->cp_id;
             int j = cur->node_id;
-            if (cp_nodes[i][j]->is_valid()) {
-                string str = cp_nodes[i][j]->nid_str;
-                for(int k=0;k <cp_s_left;k++) {
-                    if (str[k]=='0' && i!=k) {
-                        int new_id = j + pow(2, cp_s_left - 1 - k);
-                        if (cp_nodes[k][new_id]->wt > cur->wt + weights[i][k]) {
-                            cp_nodes[k][new_id]->wt = cur->wt + weights[i][k];
-                            pq.push(cp_nodes[k][new_id]);
-                        }
-                    } 
-                }
-                if (j==pow(2,cp_s_left)-1) {
-                    if (end_node->wt > cur->wt + weights[i][cp_s_left+1]) {
-                        end_node->wt = cur->wt + weights[i][cp_s_left+1];
-                        pq.push(end_node);
+            string str = cp_nodes[i][j]->nid_str;
+            for(int k=0;k <cp_s_left;k++) {
+                if (str[k]=='0' && i!=k) {
+                    int new_id = j + pow(2, cp_s_left - 1 - k);
+                    if (cp_nodes[k][new_id]->wt > cur->wt + weights[i][k]) {
+                        cp_nodes[k][new_id]->wt = cur->wt + weights[i][k];
+                        pq.push(cp_nodes[k][new_id]);
                     }
+                } 
+            }
+            if (j==pow(2,cp_s_left)-1) {
+                if (end_node->wt > cur->wt + weights[i][cp_s_left+1]) {
+                    end_node->wt = cur->wt + weights[i][cp_s_left+1];
+                    pq.push(end_node);
                 }
             }
         }
