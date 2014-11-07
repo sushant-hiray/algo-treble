@@ -1,3 +1,12 @@
+/**
+ * @file orienteering.cpp  Orienteering class
+ *
+ * Project Clearwater - IMS in the Cloud
+ * Author:  Sushant Hiray <http://sushant-hiray.me>
+ *
+ * The author can be reached by email at hiraysushant@gmail.com
+ */
+
 #include <iostream>
 #include <cstdio>
 #include <vector>
@@ -9,17 +18,24 @@
 #define INT_MAX 1000000009
 using namespace std;
 
+/**
+ * struct: location
+ * x: stores the first co-ordinate for referencing 2D vector
+ * y: stores the second co-ordinate for referencing 2D vector
+ */
 struct location {
     int x;
     int y;
+    // Default Constructor
     location(int i=0, int j=0) {
         x = i;
         y = j;
     }
+    // Pretty print
     void print() {
         cout << "[" << x << "," << y << "]";
     }
-
+    // Equality check
     bool eq(location l) {
         if ((x == l.x) && (y == l.y))
             return true;
@@ -27,7 +43,17 @@ struct location {
     }
 };
 
-vector<vector<int> > hamiltonian_length;
+// Global vector used to store distances between any 2 checkpoints
+vector<vector<int> > hamiltonian_length; 
+
+/**
+ * struct: node
+ * id: unique id of the node, in the original maze
+ * wt: weight of the node. Used during DFS
+ * val: identifier to determine its type: start, end, checkpoint, deadend
+ * cp_id: if it is a checkpoint, then unique checkpoint id, else -1
+ * l: location in the original maze
+ */
 
 struct node {
     int id;
@@ -35,6 +61,7 @@ struct node {
     int val;
     int cp_id;
     location l;
+    // Constructor
     node(int v, int i, int j, int cp, int d) {
         l.x = i;
         l.y = j;
@@ -43,18 +70,27 @@ struct node {
         cp_id = cp;
         id = d;
     }
+    // Pretty print
     void print() {
         cout << wt << " | ";
         l.print();
     }
+    // Reset the weight of the node
     void reset() {
         wt = INT_MAX;
     }
-
+    // equality checking
     bool eq(node n) {
         return l.eq(n.l);
     }
 };
+
+/**
+ * struct: checkpoint_node
+ * cp_id: id of the checkpoint, references node_id in the original maze
+ * node_id: unique id amongst checkpoint with with equal cp_id
+ * nid_str: representation of node_id in bitstring
+ */
 
 struct checkpoint_node
 {
@@ -63,6 +99,7 @@ struct checkpoint_node
     int wt;
     string nid_str;
     
+    // constructor
     checkpoint_node(int c,int n, int m, int w=INT_MAX) {
         cp_id = c;
         node_id = n;
@@ -77,28 +114,33 @@ struct checkpoint_node
         nid_str = str;
     }
 
+    // default constructor
     checkpoint_node() {
         cp_id = -1;
         node_id = -1;
         wt = INT_MAX;
     }
 
+    // reset nodes during dfs
     void reset() {
         wt = INT_MAX;
     }
 
+    // equality check operator
     bool eq(checkpoint_node n) {
         return (cp_id == n.cp_id && node_id == n.node_id);
     }
 
+    // pretty print
     void print() {
         cout << wt << " | " << cp_id << ": " << nid_str;
     }
-
-    bool is_valid() {
-        return (nid_str[cp_id]=='1' ? true : false);
-    }
 };
+
+/**
+ * class: node_comparison
+ * comparator operators for all the structs
+ */
 
 class node_comparison
 {
@@ -119,28 +161,47 @@ public:
     }
 };
 
+/**
+ * class: Orienteering
+ * Contains utility function to parse a maze and generate shortest path
+ * 
+ */
+
+
 class Orienteering
 {
 private:
-    vector<vector<node*> > maze;
-    vector<location> checkpoint;
-    vector<vector<int> > weights;
-    int width;
-    int height;
-    int cp_s;
-    location start;
-    location end;
-
-    checkpoint_node* st_node;
-    checkpoint_node* end_node;
+    vector<vector<node*> > maze; // the original maze generated via user input
+    vector<location> checkpoint; // vector stogin locations of checkpoints in maze
+    vector<vector<int> > weights; // stores the shortest path cost between 
+                                  // every pair of checkpoints
+    int width; // width of the maze
+    int height; // height of the maze
+    int cp_s; // total number of checkpoints (including start and end node)
+    location start; // location of the start node
+    location end; // location of the end node
 
 
+    checkpoint_node* st_node; // starting point of traversal
+    checkpoint_node* end_node; // end point of traversal
+
+
+    // util function to parse the user input and initialize maze and 
+    // checkpoint vectors
     void parse_input();
+    
+    // decodes parameter to user encoding and prints it
+    // eg: -1 prints '#'; 2 prints '@' 
     void print_index(int);
+
+    // decode the vector maze and print it
     void print_maze();
+
+    // prints the location of the checkpoints
     void print_cp();
+
+    // 
     void print_cp_weights();
-    void init_graph();
     void calc_weights();
     void generate_cp_graph();
     int find_min();
@@ -150,6 +211,9 @@ private:
     template<typename T>
     int shortest_path(T*, T* );
     int shortest_cp_path(checkpoint_node*, checkpoint_node* );
+
+    // resets the entire graph
+    // templatized version allows to reset graph with any type of nodes
     template<typename T>  
     void reset_graph(vector<vector<T*>> &);
     
@@ -169,14 +233,11 @@ Orienteering::Orienteering()
 void Orienteering::main()
 {
     parse_input();
-    // init_graph();
     // // print_maze();
     calc_weights();
     // print_cp();
     // print_cp_weights();
-    
-    // // print_cp();
-    cout << "ANS is " << find_min() <<endl;
+    cout << find_min() <<endl;
     
 }
 
@@ -293,10 +354,6 @@ void Orienteering::print_cp()
         cout << " ";
     }
     cout << endl;
-    for(int j=0;j<cp_s;j++) {
-        cout << weights[0][j] << " ";
-    }
-    cout << endl;
     // st_node->print();
     // cout << "--->";
     // for(auto it = st_node->neighbors.begin(); it!=st_node->neighbors.end();it++) {
@@ -328,37 +385,6 @@ void Orienteering::print_cp_weights()
         }
         cout << endl;
     }
-
-    // for(int i=0;i<cp_s;i++) {
-    //     for(int j=0;j<height*width;j++) {
-    //         cout << dfs_wt[i][j] << " ";
-    //     }
-    //     cout << endl;
-    // }
-}
-
-void Orienteering::init_graph()
-{
-    // for(int i=0;i<height;i++) {
-    //     for(int j=0;j<width;j++) {
-    //         int addx = -1;
-    //         int addy = -1;
-    //         if (maze[i][j]->val!=-1) {
-    //             for(;addx<=1;addx+=2) {
-    //                 if ((i+addx>=0) && (i+addx<height) && maze[i+addx][j]->val!=-1) {
-    //                         edge* e = new edge(maze[i+addx][j], 1);
-    //                         (maze[i][j]->neighbors).push_back(e);
-    //                 }
-    //             }
-    //             for(;addy<=1;addy+=2) {
-    //                 if ((j+addy>=0) && (j+addy<width) && maze[i][j+addy]->val!=-1) {
-    //                     edge* e = new edge(maze[i][j+addy], 1);
-    //                     (maze[i][j]->neighbors).push_back(e);
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
 }
 
 int Orienteering::shortest_cp_path(checkpoint_node* start, checkpoint_node* end) {
@@ -368,7 +394,7 @@ int Orienteering::shortest_cp_path(checkpoint_node* start, checkpoint_node* end)
 
 
     for(int i=0; i<cp_s_left;i++) {
-        int new_id = pow(2, cp_s_left-i-1);
+        int new_id = pow(2, i);
         hamiltonian_length[i][new_id] = weights[i][cp_s_left];
         pq.push(location(i,new_id));
     }
@@ -387,21 +413,13 @@ int Orienteering::shortest_cp_path(checkpoint_node* start, checkpoint_node* end)
             pq.pop();
             int i = cur.x;
             int j = cur.y;
-            int n = j;
             int wt;
             
-            int str = 0;
-            int q=cp_s_left-1;
+            int str = j;
             
-            while(q>=0) {
-                str+= ((n & 1) ? 1 : 0)<<q;
-                n = n >> 1;
-                q--;
-            }
-
-            for(int k=0;k <cp_s_left;k++) {
+            for(char k=0;k <cp_s_left;k++) {
                 if (!(str&1) && i!=k) {
-                    int new_id = j | (1<<(cp_s_left - 1 - k));
+                    int new_id = j | (1<<(k));
                     wt = weights[i][k];
                     wt+=hamiltonian_length[cur.x][cur.y];
                     if (hamiltonian_length[k][new_id] > wt) {
