@@ -30,6 +30,7 @@ struct location {
     }
 };
 
+vector<vector<int> > hamiltonian_length;
 
 struct node {
     int id;
@@ -127,17 +128,20 @@ public:
     {
         return (lhs->wt > rhs->wt);
     }
+    bool operator() (const location& lhs, const location& rhs) const
+    {
+        return ((hamiltonian_length[lhs.x][lhs.y]) > (hamiltonian_length[rhs.x][rhs.y]));
+    }
 };
 
 class Orienteering
 {
 private:
     vector<vector<node*> > maze;
-    vector<vector<checkpoint_node*> > cp_nodes;
+    // vector<vector<checkpoint_node*> > cp_nodes;
     vector<location> checkpoint;
     vector<vector<int> > weights;
-    vector<vector<int> > hamiltonian_length;
-    vector<vector<int> > dfs_wt;
+    // vector<vector<int> > dfs_wt;
     int width;
     int height;
     int cp_s;
@@ -158,11 +162,13 @@ private:
     void generate_cp_graph();
     int find_min();
     void dfs(node*,int);
+    void dfs_new(node*);
 
 
     template<typename T>
     int shortest_path(T*, T* );
     int shortest_cp_path(checkpoint_node*, checkpoint_node* );
+    int shortest_cp_path_new(checkpoint_node*, checkpoint_node* );
     template<typename T>  
     void reset_graph(vector<vector<T*>> &);
     
@@ -246,17 +252,16 @@ void Orienteering::parse_input()
     maze[start.x][start.y]->cp_id = cp_s-2;
     maze[end.x][end.y]->cp_id = cp_s-1;
     weights.resize(cp_s , vector<int>( cp_s , INT_MAX ));
-    dfs_wt.resize(cp_s, vector<int>(height*width, INT_MAX));
-    hamiltonian_length.resize(cp_s, (vector<int>(cp_s-2,INT_MAX)));
-
-    for(int i=0;i<cp_s;i++) {
-        vector<checkpoint_node*> temp;
-        for(int j=0;j<pow(2, cp_s-2);j++) {
-            checkpoint_node* cp_n = new checkpoint_node(i,j,cp_s-2);
-            temp.push_back(cp_n);
-        }
-        cp_nodes.push_back(temp);
-    }
+    // dfs_wt.resize(cp_s, vector<int>(height*width, INT_MAX));
+    hamiltonian_length.resize(cp_s, (vector<int>(pow(2,cp_s-2),INT_MAX)));
+    // for(int i=0;i<cp_s;i++) {
+    //     vector<checkpoint_node*> temp;
+    //     for(int j=0;j<pow(2, cp_s-2);j++) {
+    //         checkpoint_node* cp_n = new checkpoint_node(i,j,cp_s-2);
+    //         temp.push_back(cp_n);
+    //     }
+    //     cp_nodes.push_back(temp);
+    // }
 }
 
 
@@ -339,12 +344,12 @@ void Orienteering::print_cp_weights()
         cout << endl;
     }
 
-    for(int i=0;i<cp_s;i++) {
-        for(int j=0;j<height*width;j++) {
-            cout << dfs_wt[i][j] << " ";
-        }
-        cout << endl;
-    }
+    // for(int i=0;i<cp_s;i++) {
+    //     for(int j=0;j<height*width;j++) {
+    //         cout << dfs_wt[i][j] << " ";
+    //     }
+    //     cout << endl;
+    // }
 }
 
 void Orienteering::init_graph()
@@ -372,43 +377,99 @@ void Orienteering::init_graph()
 }
 
 int Orienteering::shortest_cp_path(checkpoint_node* cur, checkpoint_node* end) {
-    priority_queue<checkpoint_node*, std::vector<checkpoint_node*>, node_comparison> pq;
+    // priority_queue<checkpoint_node*, std::vector<checkpoint_node*>, node_comparison> pq;
+    // int cp_s_left = cp_s - 2;
+    // for(int i=0; i<cp_s_left;i++) {
+    //     int new_id = pow(2, cp_s_left-i-1);
+    //     cp_nodes[i][new_id]->wt = weights[i][cp_s_left];
+    //     pq.push(cp_nodes[i][new_id]);
+    // }
+    
+    // while(!pq.empty()) {
+    //     cur = pq.top();
+    //     if (cur->eq(*end)) {
+    //         return cur->wt;
+    //     } else {
+    //         pq.pop();
+    //         int i = cur->cp_id;
+    //         int j = cur->node_id;
+    //         int wt;
+    //         string str = cp_nodes[i][j]->nid_str;
+    //         for(int k=0;k <cp_s_left;k++) {
+    //             if (str[k]=='0' && i!=k) {
+    //                 int new_id = j + pow(2, cp_s_left - 1 - k);
+    //                 wt = weights[i][k];
+    //                 if (cp_nodes[k][new_id]->wt > cur->wt + wt) {
+    //                     cp_nodes[k][new_id]->wt = cur->wt + wt;
+    //                     pq.push(cp_nodes[k][new_id]);
+    //                 }
+    //             } 
+    //         }
+    //         if (j==pow(2,cp_s_left)-1) {
+    //             wt =  weights[i][cp_s_left+1];
+    //             if (end_node->wt > cur->wt + wt) {
+    //                 end_node->wt = cur->wt + wt;
+    //                 pq.push(end_node);
+    //             }
+    //         }
+    //     }
+    // }
+    return INT_MAX;
+}
+
+int Orienteering::shortest_cp_path_new(checkpoint_node* start, checkpoint_node* end) {
+    priority_queue<location, std::vector<location>, node_comparison> pq;
     int cp_s_left = cp_s - 2;
+    int max_pow = pow(2, cp_s_left)-1;
     for(int i=0; i<cp_s_left;i++) {
         int new_id = pow(2, cp_s_left-i-1);
-        cp_nodes[i][new_id]->wt = weights[i][cp_s_left];
-        pq.push(cp_nodes[i][new_id]);
+        hamiltonian_length[i][new_id] = weights[i][cp_s_left];
+        pq.push(location(i,new_id));
     }
-    
+    location cur;
+    location final(cp_s_left+1, max_pow);
     while(!pq.empty()) {
         cur = pq.top();
-        if (cur->eq(*end)) {
-            return cur->wt;
+        if (cur.eq(final)) {
+            return hamiltonian_length[cur.x][cur.y];
         } else {
             pq.pop();
-            int i = cur->cp_id;
-            int j = cur->node_id;
-            string str = cp_nodes[i][j]->nid_str;
+            int i = cur.x;
+            int j = cur.y;
+            int n = j;
+            int wt;
+            string str(cp_s_left,'0');
+            int q=cp_s_left-1;
+            while(q>=0) {
+                str[q] = ((n & 1) ? '1' : '0');
+                n = n >> 1;
+                q--;
+            }
             for(int k=0;k <cp_s_left;k++) {
                 if (str[k]=='0' && i!=k) {
                     int new_id = j + pow(2, cp_s_left - 1 - k);
-                    if (cp_nodes[k][new_id]->wt > cur->wt + weights[i][k]) {
-                        cp_nodes[k][new_id]->wt = cur->wt + weights[i][k];
-                        pq.push(cp_nodes[k][new_id]);
+                    wt = weights[i][k];
+                    wt+=hamiltonian_length[cur.x][cur.y];
+                    if (hamiltonian_length[k][new_id] > wt) {
+                        hamiltonian_length[k][new_id] = wt;
+                        pq.push(location(k,new_id));
                     }
                 } 
             }
-            if (j==pow(2,cp_s_left)-1) {
-                if (end_node->wt > cur->wt + weights[i][cp_s_left+1]) {
-                    end_node->wt = cur->wt + weights[i][cp_s_left+1];
-                    pq.push(end_node);
+            if (j==max_pow) {
+                wt =  weights[i][cp_s_left+1];
+                wt+=  hamiltonian_length[cur.x][cur.y];
+                if (hamiltonian_length[cp_s_left+1][max_pow] > wt) {
+                    hamiltonian_length[cp_s_left+1][max_pow] = wt;
+                    pq.push(final);
                 }
             }
         }
     }
     return INT_MAX;
-}
 
+
+}
 
 template<typename T>
 void Orienteering::reset_graph(vector<vector<T*>>& graph)
@@ -444,8 +505,35 @@ int Orienteering::shortest_path(T* cur, T* end) {
 
 void Orienteering::dfs(node* cur, int i)
 {
+    // cur->wt=0;
+    // dfs_wt[i][cur->id] = 0;
+    // int count = 0;
+    // priority_queue<node*, std::vector<node*>, node_comparison> pq;
+    // pq.push(cur);
+    // int cp_index = cur->cp_id;
+    // while(!pq.empty()) {
+    //     cur = pq.top();
+    //     if (cur->val==2 || cur->val==3 || cur->val==4) {
+    //         weights[cp_index][cur->cp_id] = dfs_wt[i][cur->id];
+    //         count++;
+    //     } 
+    //     if (count == cp_s)
+    //         break;
+    //     pq.pop();
+    //     for(auto it = cur->neighbors.begin(); it!=cur->neighbors.end();it++) {
+    //         if (dfs_wt[i][(*it)->a->id] > dfs_wt[i][cur->id] + (*it)->weight) {
+    //             dfs_wt[i][(*it)->a->id] = dfs_wt[i][cur->id] + (*it)->weight;
+    //             (*it)->a->wt = dfs_wt[i][(*it)->a->id];
+    //             pq.push((*it)->a);
+    //         }
+    //     }
+    // }
+}
+
+
+void Orienteering::dfs_new(node* cur)
+{
     cur->wt=0;
-    dfs_wt[i][cur->id] = 0;
     int count = 0;
     priority_queue<node*, std::vector<node*>, node_comparison> pq;
     pq.push(cur);
@@ -453,16 +541,15 @@ void Orienteering::dfs(node* cur, int i)
     while(!pq.empty()) {
         cur = pq.top();
         if (cur->val==2 || cur->val==3 || cur->val==4) {
-            weights[cp_index][cur->cp_id] = dfs_wt[i][cur->id];
+            weights[cp_index][cur->cp_id] = cur->wt;
             count++;
         } 
         if (count == cp_s)
             break;
         pq.pop();
         for(auto it = cur->neighbors.begin(); it!=cur->neighbors.end();it++) {
-            if (dfs_wt[i][(*it)->a->id] > dfs_wt[i][cur->id] + (*it)->weight) {
-                dfs_wt[i][(*it)->a->id] = dfs_wt[i][cur->id] + (*it)->weight;
-                (*it)->a->wt = dfs_wt[i][(*it)->a->id];
+            if ((*it)->a->wt > cur->wt + (*it)->weight) {
+                (*it)->a->wt = cur->wt + (*it)->weight;
                 pq.push((*it)->a);
             }
         }
@@ -472,7 +559,8 @@ void Orienteering::dfs(node* cur, int i)
 void Orienteering::calc_weights()
 {
     for(int i=0; i<checkpoint.size();i++) {
-        dfs(maze[checkpoint[i].x][checkpoint[i].y], i);
+        reset_graph<node>(maze);
+        dfs_new(maze[checkpoint[i].x][checkpoint[i].y]);
     }
 }
 
@@ -495,7 +583,7 @@ int Orienteering::find_min()
         return min_length;
     } else {
         st_node->wt = 0;
-        min_length = shortest_cp_path(st_node, end_node);
+        min_length = shortest_cp_path_new(st_node, end_node);
         return min_length;
     }
 }
