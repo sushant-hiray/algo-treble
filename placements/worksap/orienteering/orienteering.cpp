@@ -362,17 +362,23 @@ void Orienteering::init_graph()
 }
 
 int Orienteering::shortest_cp_path(checkpoint_node* start, checkpoint_node* end) {
-    // priority_queue<location, std::vector<location>, node_comparison> pq;
     queue<location> pq;
     int cp_s_left = cp_s - 2;
-    int max_pow = pow(2, cp_s_left)-1;
+    int max_pow = (1<<(cp_s_left))-1;
+
+
     for(int i=0; i<cp_s_left;i++) {
         int new_id = pow(2, cp_s_left-i-1);
         hamiltonian_length[i][new_id] = weights[i][cp_s_left];
         pq.push(location(i,new_id));
     }
+
+
+
     location cur;
     location final(cp_s_left+1, max_pow);
+
+
     while(!pq.empty()) {
         cur = pq.front();
         if (cur.eq(final)) {
@@ -383,23 +389,27 @@ int Orienteering::shortest_cp_path(checkpoint_node* start, checkpoint_node* end)
             int j = cur.y;
             int n = j;
             int wt;
-            string str(cp_s_left,'0');
+            
+            int str = 0;
             int q=cp_s_left-1;
+            
             while(q>=0) {
-                str[q] = ((n & 1) ? '1' : '0');
+                str+= ((n & 1) ? 1 : 0)<<q;
                 n = n >> 1;
                 q--;
             }
+
             for(int k=0;k <cp_s_left;k++) {
-                if (str[k]=='0' && i!=k) {
-                    int new_id = j + pow(2, cp_s_left - 1 - k);
+                if (!(str&1) && i!=k) {
+                    int new_id = j | (1<<(cp_s_left - 1 - k));
                     wt = weights[i][k];
                     wt+=hamiltonian_length[cur.x][cur.y];
                     if (hamiltonian_length[k][new_id] > wt) {
                         hamiltonian_length[k][new_id] = wt;
                         pq.push(location(k,new_id));
                     }
-                } 
+                }
+                str = str >> 1;
             }
             if (j==max_pow) {
                 wt =  weights[i][cp_s_left+1];
@@ -514,7 +524,6 @@ int Orienteering::find_min()
     int min_length;
     int cp_s_left = cp_s-2;
     if (cp_s_left == 0) {
-        cout << "here" << endl;
         reset_graph<node>(maze);
         maze[start.x][start.y]->wt=0;
         min_length = shortest_path<node>(maze[start.x][start.y], maze[end.x][end.y]);
